@@ -1,0 +1,84 @@
+@import 'tailwindcss';
+
+/* Token riêng cho đề tài thư viện - "phòng đọc": nền sáng, mực navy đậm, điểm
+   nhấn đồng/brass ấm (gợi đèn bàn đọc sách bằng đồng) - tránh cream+cam đất mặc định. */
+@theme {
+  --color-ink: #182135;
+  --color-ink-light: #2b3a57;
+  --color-ink-soft: #5b6b8c;
+  --color-paper: #fbfaf7;
+  --color-brass: #a87c3f;
+  --color-brass-light: #c79a5c;
+  --color-brass-soft: #f0e4d0;
+  --color-border: #e4e1d8;
+  --color-danger: #a6403a;
+  --color-success: #3e6b52;
+
+  --font-serif: 'Source Serif 4', Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+  }
+
+  h1 {
+    @apply font-serif text-3xl font-semibold tracking-tight text-ink;
+  }
+
+  h2 {
+    @apply font-serif text-xl font-semibold text-ink;
+  }
+}
+
+/* Tailwind v4: @apply KHÔNG chain được 1 class tự định nghĩa vào class tự định
+   nghĩa khác (.btn-primary { @apply btn ... } sẽ báo lỗi "unknown utility class").
+   Nên mỗi biến thể viết ĐẦY ĐỦ, không tham chiếu qua .btn/.badge trung gian. */
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium
+      bg-brass text-white transition-colors hover:bg-brass-light
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-border bg-white px-4 py-2
+      text-sm font-medium text-ink transition-colors hover:bg-paper
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-danger/30 bg-white px-4 py-2
+      text-sm font-medium text-danger transition-colors hover:bg-danger/5
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-ink
+      placeholder:text-ink-soft/60 focus:border-brass focus:outline-none focus:ring-2 focus:ring-brass/20;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-white p-5;
+  }
+
+  .field-error {
+    @apply mt-1 text-xs text-danger;
+  }
+
+  .table-shell {
+    @apply w-full border-collapse text-sm;
+  }
+  .table-shell th {
+    @apply border-b border-ink/15 px-3 py-2 text-left font-medium text-ink-soft;
+  }
+  .table-shell td {
+    @apply border-b border-border px-3 py-3 text-ink;
+  }
+
+  .badge-warning {
+    @apply inline-flex items-center rounded-full bg-danger/10 px-2.5 py-0.5 text-xs font-medium text-danger;
+  }
+  .badge-neutral {
+    @apply inline-flex items-center rounded-full bg-ink/5 px-2.5 py-0.5 text-xs font-medium text-ink-soft;
+  }
+}

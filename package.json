@@ -1,0 +1,26 @@
+{
+  "name": "library-frontend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "next build",
+    "start": "next start -p 3001"
+  },
+  "dependencies": {
+    "next": "^14.2.0",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "read-excel-file": "^9.3.10",
+    "write-excel-file": "^4.1.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.15",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "openapi-typescript": "^7.4.0",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^4.1.15",
+    "typescript": "^5.5.0"
+  }
+}
