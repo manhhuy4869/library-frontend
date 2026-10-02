@@ -18,6 +18,7 @@ export default function RegisterPage() {
     phone: '',
   });
   const [error, setError] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   function set<K extends keyof typeof values>(key: K, value: string) {
@@ -30,6 +31,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await registerStudent(values);
+      setSubmitted(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không thể tạo tài khoản');
     } finally {
@@ -41,8 +43,14 @@ export default function RegisterPage() {
     <div className="fixed inset-0 flex items-center justify-center overflow-y-auto bg-ink px-4 py-8">
       <div className="w-full max-w-lg rounded-lg bg-white p-8 shadow-xl">
         <h1 className="text-2xl">Tài khoản sinh viên</h1>
-        <p className="mt-1 text-sm text-ink-soft">Thông tin tài khoản dùng để đặt lịch mượn sách.</p>
-        <form onSubmit={handleSubmit} className="mt-6 grid gap-4 sm:grid-cols-2">
+        <p className="mt-1 text-sm text-ink-soft">Thông tin đăng ký cần được quản trị viên duyệt.</p>
+        {submitted ? (
+          <div className="mt-6 border-l-4 border-brass bg-brass-soft px-4 py-3 text-sm" role="status">
+            <p className="font-medium">Đã gửi yêu cầu đăng ký.</p>
+            <p className="mt-1">Bạn có thể đăng nhập sau khi quản trị viên duyệt tài khoản.</p>
+            <Link className="mt-3 inline-block font-medium underline" href="/login">Quay lại đăng nhập</Link>
+          </div>
+        ) : <form onSubmit={handleSubmit} className="mt-6 grid gap-4 sm:grid-cols-2">
           <Input label="Họ và tên" value={values.fullName} onChange={(e) => set('fullName', e.target.value)} required />
           <Input label="Mã sinh viên" value={values.studentCode} onChange={(e) => set('studentCode', e.target.value)} required />
           <Input label="Tên đăng nhập" value={values.username} onChange={(e) => set('username', e.target.value)} required />
@@ -56,7 +64,7 @@ export default function RegisterPage() {
               {loading ? 'Đang tạo...' : 'Tạo tài khoản'}
             </Button>
           </div>
-        </form>
+        </form>}
       </div>
     </div>
   );

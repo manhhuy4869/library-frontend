@@ -32,6 +32,10 @@ function BooksPageContent() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  const [author, setAuthor] = useState('');
+  const [category, setCategory] = useState('');
+  const [selectedBookIds, setSelectedBookIds] = useState<number[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
@@ -41,7 +45,13 @@ function BooksPageContent() {
   async function load() {
     setLoading(true);
     try {
-      const res = await booksApi.list({ search: search || undefined, page, pageSize: PAGE_SIZE });
+      const res = await booksApi.list({
+        search: search || undefined,
+        author: author || undefined,
+        category: category || undefined,
+        page,
+        pageSize: PAGE_SIZE,
+      });
       setItems(res.items);
       setTotal(res.total);
     } catch (err) {
@@ -80,9 +90,32 @@ function BooksPageContent() {
     if (!confirm('Xóa sách này? (chỉ xóa được nếu không còn bản sao nào)')) return;
     try {
       await booksApi.remove(id);
+      setSelectedBookIds((selected) => selected.filter((selectedId) => selectedId !== id));
       load();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Không xóa được sách');
+    }
+  }
+
+  function toggleAllBooks(ids: number[]) {
+    const allSelected = ids.every((id) => selectedBookIds.includes(id));
+    setSelectedBookIds((selected) => allSelected
+      ? selected.filter((id) => !ids.includes(id))
+      : [...new Set([...selected, ...ids])]);
+  }
+
+  async function handleBulkDelete() {
+    if (!selectedBookIds.length || !confirm(`Xóa ${selectedBookIds.length} sách đã chọn cùng bản sao chưa có lịch sử mượn/đặt trước? Sách có lịch sử sẽ được giữ lại.`)) return;
+    setBulkDeleting(true);
+    try {
+      const result = await booksApi.removeMany(selectedBookIds);
+      setSelectedBookIds([]);
+      await load();
+      alert(`Đã xóa ${result.deleted} sách và ${result.copiesDeleted} bản sao.${result.skipped ? ` Bỏ qua ${result.skipped} sách có lịch sử mượn/đặt trước hoặc không còn tồn tại.` : ''}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Không thể xóa các sách đã chọn');
+    } finally {
+      setBulkDeleting(false);
     }
   }
 
@@ -94,6 +127,11 @@ function BooksPageContent() {
           <p className="mt-1 text-sm text-ink-soft">{total} đầu sách trong thư viện</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {selectedBookIds.length > 0 && (
+            <Button variant="danger" type="button" disabled={bulkDeleting} onClick={handleBulkDelete}>
+              Xóa đã chọn ({selectedBookIds.length})
+            </Button>
+          )}
           <ExcelImport
             columns={BOOK_EXCEL_COLUMNS}
             fileName="mau-nhap-sach.xlsx"
@@ -113,12 +151,27 @@ function BooksPageContent() {
         </div>
       </div>
 
-      <form onSubmit={handleSearchSubmit} className="mt-6 flex gap-2">
+      <form onSubmit={handleSearchSubmit} className="mt-6 flex flex-wrap gap-2">
         <Input
-          className="max-w-xs"
+          className="w-48"
           placeholder="Tìm theo tên sách..."
+          aria-label="Tìm theo tên sách"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+        />
+        <Input
+          className="w-48"
+          placeholder="Tìm theo tác giả..."
+          aria-label="Tìm theo tác giả"
+          value={author}
+          onChange={(e) => setAuthor(e.target.value)}
+        />
+        <Input
+          className="w-48"
+          placeholder="Tìm theo thể loại..."
+          aria-label="Tìm theo thể loại"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
         />
         <Button type="submit">Tìm</Button>
       </form>
@@ -134,6 +187,11 @@ function BooksPageContent() {
         <BookTable
           items={items}
           loading={loading}
+          selectedIds={selectedBookIds}
+          onToggle={(id) => setSelectedBookIds((selected) => selected.includes(id)
+            ? selected.filter((selectedId) => selectedId !== id)
+            : [...selected, id])}
+          onToggleAll={toggleAllBooks}
           onEdit={(book) => {
             setEditing(book);
             setFieldErrors({});

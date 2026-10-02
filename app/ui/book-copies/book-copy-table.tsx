@@ -44,6 +44,7 @@ export function BookCopyTable({ items, loading, onEdit, onDelete }: BookCopyTabl
               ) : (
                 <Badge variant="warning">{statusLabel[copy.status]}</Badge>
               )}
+              {copy.status === 'damaged' && copy.conditionNote && <p className="mt-1 max-w-xs text-xs text-danger">{copy.conditionNote}</p>}
             </td>
             <td>
               <div className="flex justify-end gap-2">

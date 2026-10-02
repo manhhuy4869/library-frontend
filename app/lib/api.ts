@@ -13,6 +13,7 @@ import type {
   BorrowerStatistic,
   Notification,
   Fine,
+  FinePolicy,
   PopularBook,
   MonthlyReport,
 } from './types';
@@ -33,9 +34,9 @@ function getAccessToken() {
   return localStorage.getItem('accessToken');
 }
 
-function setTokens(accessToken: string, refreshToken: string) {
+function setAccessToken(accessToken: string) {
   localStorage.setItem('accessToken', accessToken);
-  localStorage.setItem('refreshToken', refreshToken);
+  localStorage.removeItem('refreshToken');
 }
 
 function clearTokens() {
@@ -71,20 +72,17 @@ export class ApiError extends Error {
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
-  const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
-  if (!refreshToken) return false;
-
   if (!refreshPromise) {
     refreshPromise = fetch(`${API_URL}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
+      credentials: 'include',
     })
       .then(async (res) => {
         if (!res.ok) return false;
-        const body: ApiResponse<{ accessToken: string; refreshToken: string }> = await res.json();
+        const body: ApiResponse<{ accessToken: string }> = await res.json();
         if (!body.data) return false;
-        setTokens(body.data.accessToken, body.data.refreshToken);
+        setAccessToken(body.data.accessToken);
         return true;
       })
       .catch(() => false)
@@ -100,6 +98,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, isRetry = fa
 
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -131,11 +130,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}, isRetry = fa
 // ===================== Auth =====================
 export const authApi = {
   async login(username: string, password: string) {
-    const data = await apiFetch<{ accessToken: string; refreshToken: string }>('/auth/login', {
+    const data = await apiFetch<{ accessToken: string }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     });
-    setTokens(data.accessToken, data.refreshToken);
+    setAccessToken(data.accessToken);
     return data;
   },
   async logout() {
@@ -153,12 +152,10 @@ export const authApi = {
     className?: string;
     phone?: string;
   }) {
-    const data = await apiFetch<{ accessToken: string; refreshToken: string }>('/auth/register-student', {
+    return apiFetch<{ approvalStatus: 'pending'; message: string }>('/auth/register-student', {
       method: 'POST',
       body: JSON.stringify(dto),
     });
-    setTokens(data.accessToken, data.refreshToken);
-    return data;
   },
   isAuthenticated() {
     return !!getAccessToken();
@@ -180,7 +177,7 @@ export const reservationsApi = {
 
 // ===================== Books =====================
 export const booksApi = {
-  list: (params: { search?: string; page?: number; pageSize?: number } = {}) =>
+  list: (params: { search?: string; author?: string; category?: string; page?: number; pageSize?: number } = {}) =>
     apiFetch<PaginatedResult<Book>>(`/books${toQueryString(params)}`),
   get: (id: number) => apiFetch<Book>(`/books/${id}`),
   create: (dto: Partial<Book>) =>
@@ -193,6 +190,11 @@ export const booksApi = {
   update: (id: number, dto: Partial<Book>) =>
     apiFetch<Book>(`/books/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
   remove: (id: number) => apiFetch<Book>(`/books/${id}`, { method: 'DELETE' }),
+  removeMany: (ids: number[]) =>
+    apiFetch<{ deleted: number; copiesDeleted: number; skipped: number }>('/books/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    }),
 };
 
 // ===================== Book copies =====================
@@ -233,24 +235,40 @@ export const borrowRecordsApi = {
   list: (params: { readerId?: number; status?: string; search?: string; activeOnly?: boolean; page?: number; pageSize?: number } = {}) =>
     apiFetch<PaginatedResult<BorrowRecord>>(`/borrow-records${toQueryString(params)}`),
   own: () => apiFetch<BorrowRecord[]>('/borrow-records/own'),
-  borrow: (copyId: number, readerId: number) =>
+  ownHistory: (params: { page?: number; pageSize?: number } = {}) =>
+    apiFetch<PaginatedResult<BorrowRecord>>(`/borrow-records/own/history${toQueryString(params)}`),
+  confirmOwnCondition: (id: number, condition: 'good' | 'damaged', note?: string) =>
+    apiFetch<BorrowRecord>(`/borrow-records/own/${id}/confirm-condition`, {
+      method: 'POST',
+      body: JSON.stringify({ condition, note }),
+    }),
+  borrow: (copyId: number, readerId: number, issueConditionConfirmed: boolean) =>
     apiFetch<BorrowRecord>('/borrow-records/borrow', {
       method: 'POST',
-      body: JSON.stringify({ copyId, readerId }),
+      body: JSON.stringify({ copyId, readerId, issueConditionConfirmed }),
     }),
-  return: (copyId: number) =>
+  return: (copyId: number, condition: 'available' | 'damaged' | 'lost', damageNote?: string) =>
     apiFetch<BorrowRecord>('/borrow-records/return', {
       method: 'POST',
-      body: JSON.stringify({ copyId }),
+      body: JSON.stringify({ copyId, condition, damageNote }),
     }),
 };
 
 // ===================== Users =====================
 export const usersApi = {
-  list: (params: { page?: number; pageSize?: number } = {}) =>
+  list: (params: { page?: number; pageSize?: number; approvalStatus?: 'pending' | 'approved' | 'rejected' } = {}) =>
     apiFetch<PaginatedResult<User>>(`/users${toQueryString(params)}`),
   create: (dto: { username: string; password: string; fullName: string; role?: string }) =>
     apiFetch<User>('/users', { method: 'POST', body: JSON.stringify(dto) }),
+  createStudents: (students: Record<string, string>[]) =>
+    apiFetch<{ created: number; skipped: number }>('/users/students/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ students }),
+    }),
+  approveStudent: (id: number) =>
+    apiFetch<User>(`/users/${id}/approve`, { method: 'POST' }),
+  rejectStudent: (id: number) =>
+    apiFetch<User>(`/users/${id}/reject`, { method: 'POST' }),
   update: (id: number, dto: Partial<Pick<User, 'fullName' | 'role'>>) =>
     apiFetch<User>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(dto) }),
   remove: (id: number) => apiFetch<User>(`/users/${id}`, { method: 'DELETE' }),
@@ -288,7 +306,16 @@ export const notificationsApi = {
 
 export const finesApi = {
   list: () => apiFetch<Fine[]>('/fines'),
+  own: () => apiFetch<Fine[]>('/fines/own'),
   pay: (id: number) => apiFetch<Fine>(`/fines/${id}/pay`, { method: 'POST' }),
+  policy: () => apiFetch<FinePolicy>('/fines/policy'),
+  updatePolicy: (dto: FinePolicy) => apiFetch<FinePolicy>('/fines/policy', { method: 'PUT', body: JSON.stringify(dto) }),
+  policyHistory: () => apiFetch<Array<{
+    id: number;
+    createdAt: string;
+    user?: { username: string; fullName: string };
+    metadata: { before?: FinePolicy; after?: FinePolicy };
+  }>>('/fines/policy/history'),
 };
 
 export const auditApi = {

@@ -64,10 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function registerStudent(dto: Parameters<typeof authApi.registerStudent>[0]) {
-    const data = await authApi.registerStudent(dto);
-    setIsAuthenticated(true);
-    setUser(decodeToken(data.accessToken));
-    router.push('/reservations');
+    await authApi.registerStudent(dto);
   }
 
   async function logout() {

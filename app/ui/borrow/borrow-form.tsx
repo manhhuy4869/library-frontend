@@ -2,6 +2,7 @@
 
 import { Button } from '../button';
 import { Select } from '../select';
+import { useState } from 'react';
 import type { Book, Reader, BookCopy } from '../../lib/types';
 
 function locationOf(copy: BookCopy) {
@@ -18,7 +19,7 @@ interface BorrowFormProps {
   onSelectBook: (id: string) => void;
   onSelectCopy: (id: string) => void;
   onSelectReader: (id: string) => void;
-  onSubmit: () => void;
+  onSubmit: (issueConditionConfirmed: boolean) => void;
 }
 
 export function BorrowForm({
@@ -33,11 +34,13 @@ export function BorrowForm({
   onSelectReader,
   onSubmit,
 }: BorrowFormProps) {
+  const [issueConditionConfirmed, setIssueConditionConfirmed] = useState(false);
+
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit();
+        onSubmit(issueConditionConfirmed);
       }}
       className="mt-4 flex flex-wrap items-end gap-3"
     >
@@ -74,7 +77,17 @@ export function BorrowForm({
         ))}
       </Select>
 
-      <Button variant="primary" type="submit" disabled={!selectedCopyId || !selectedReaderId}>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={issueConditionConfirmed}
+          onChange={(event) => setIssueConditionConfirmed(event.target.checked)}
+          required
+        />
+        Đã kiểm tra và xác nhận sách còn tốt trước khi giao
+      </label>
+
+      <Button variant="primary" type="submit" disabled={!selectedCopyId || !selectedReaderId || !issueConditionConfirmed}>
         Cho mượn
       </Button>
     </form>

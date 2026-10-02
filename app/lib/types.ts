@@ -27,6 +27,7 @@ export interface BookCopy {
   shelfColumn: string;
   shelfLevel: string;
   status: BookCopyStatus;
+  conditionNote?: string | null;
   book?: Book;
 }
 
@@ -47,6 +48,10 @@ export interface BorrowRecord {
   dueDate: string;
   returnDate?: string | null;
   status: BorrowStatus;
+  receiptCondition: 'pending' | 'good' | 'damaged';
+  conditionNote?: string | null;
+  conditionConfirmedAt?: string | null;
+  staffIssueConfirmedAt?: string | null;
   copy?: BookCopy & { book: Book };
   reader?: Reader;
 }
@@ -67,6 +72,7 @@ export interface User {
   username: string;
   fullName: string;
   role: UserRole;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
 }
 
 export interface PermissionInfo {
@@ -118,11 +124,20 @@ export interface Notification {
 
 export interface Fine {
   id: number;
+  type: 'late_return' | 'damaged' | 'lost';
+  reason?: string | null;
   amount: number;
   daysLate: number;
   status: 'unpaid' | 'paid';
   paidAt?: string | null;
   borrowRecord: BorrowRecord;
+}
+
+export interface FinePolicy {
+  lateReturnPerDay: number;
+  damagedBookFee: number;
+  lostBookFee: number;
+  updatedAt?: string;
 }
 
 export interface PopularBook { id: number; title: string; author: string; borrowedCount: number }

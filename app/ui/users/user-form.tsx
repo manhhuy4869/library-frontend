@@ -65,7 +65,7 @@ export function UserForm({ editing, fieldErrors, roles, onSubmit, onCancel }: Us
         error={fieldErrors.fullName?.join(', ')}
       />
       <Select label="Vai trò" value={values.role} onChange={(e) => set('role', e.target.value as UserRole)}>
-        {roles.map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}
+        {roles.filter((role) => role.code !== 'student').map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}
       </Select>
       <div className="flex gap-2">
         <Button variant="primary" type="submit">

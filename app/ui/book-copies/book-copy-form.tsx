@@ -13,6 +13,7 @@ export interface BookCopyFormValues {
   shelfColumn: string;
   shelfLevel: string;
   status: BookCopyStatus;
+  conditionNote: string;
 }
 
 const emptyValues: BookCopyFormValues = {
@@ -22,6 +23,7 @@ const emptyValues: BookCopyFormValues = {
   shelfColumn: '',
   shelfLevel: '',
   status: 'available',
+  conditionNote: '',
 };
 
 interface BookCopyFormProps {
@@ -41,6 +43,7 @@ export function BookCopyForm({ editing, fieldErrors, onSubmit, onCancel }: BookC
           shelfColumn: editing.shelfColumn,
           shelfLevel: editing.shelfLevel,
           status: editing.status,
+          conditionNote: editing.conditionNote ?? '',
         }
       : emptyValues,
   );
@@ -105,6 +108,21 @@ export function BookCopyForm({ editing, fieldErrors, onSubmit, onCancel }: BookC
           <option value="lost">Mất</option>
           <option value="damaged">Hỏng</option>
         </Select>
+      )}
+      {editing && values.status === 'damaged' && (
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-ink-soft" htmlFor="copy-condition-note">Mô tả hư hỏng</label>
+          <textarea
+            id="copy-condition-note"
+            className="input min-h-24"
+            maxLength={500}
+            value={values.conditionNote}
+            onChange={(event) => set('conditionNote', event.target.value)}
+            placeholder="Ví dụ: rách bìa, thiếu trang, dính nước..."
+            required
+          />
+          {fieldErrors.conditionNote && <p className="field-error">{fieldErrors.conditionNote.join(', ')}</p>}
+        </div>
       )}
       <div className="flex gap-2">
         <Button variant="primary" type="submit">

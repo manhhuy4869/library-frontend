@@ -72,11 +72,11 @@ function BorrowPageContent() {
     setSelectedCopyId('');
   }, [selectedBookId]);
 
-  async function handleBorrow() {
+  async function handleBorrow(issueConditionConfirmed: boolean) {
     setError('');
     setNotice('');
     try {
-      await borrowRecordsApi.borrow(Number(selectedCopyId), Number(selectedReaderId));
+      await borrowRecordsApi.borrow(Number(selectedCopyId), Number(selectedReaderId), issueConditionConfirmed);
       setNotice('Cho mượn thành công.');
       setShowBorrowForm(false);
       setSelectedBookId('');
@@ -88,12 +88,13 @@ function BorrowPageContent() {
     }
   }
 
-  async function handleReturn(copyId: number) {
+  async function handleReturn(copyId: number, condition: 'available' | 'damaged' | 'lost', damageNote?: string) {
     setError('');
     setNotice('');
     try {
-      const record = await borrowRecordsApi.return(copyId);
-      setNotice(`Đã trả sách "${record.copy?.book.title}". Đặt về vị trí: ${locationOf(record.copy)}.`);
+      const record = await borrowRecordsApi.return(copyId, condition, damageNote);
+      const statusMessage = condition === 'damaged' ? 'đã ghi nhận sách hỏng' : condition === 'lost' ? 'đã ghi nhận sách mất' : `đặt về vị trí ${locationOf(record.copy)}`;
+      setNotice(`Đã xử lý trả sách "${record.copy?.book.title}"; ${statusMessage}.`);
       loadActiveRecords();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Lỗi khi trả sách');
